@@ -8,7 +8,7 @@ const filesToCopy = [
   'index.html',
   'script.js',
   'styles.css',
-  'eus-logo.png',
+  'wusa-logo.png',
 ];
 
 fs.mkdirSync(OUT_DIR, { recursive: true });
