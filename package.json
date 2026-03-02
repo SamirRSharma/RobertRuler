@@ -5,8 +5,7 @@
   "private": true,
   "scripts": {
     "dev": "vercel dev",
-    "build": "echo \"Static project - no build step\"",
-    "start": "serve ."
+    "build": "node scripts/build.mjs"
   },
   "dependencies": {
     "@upstash/redis": "^1.32.0"
