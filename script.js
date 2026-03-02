@@ -696,8 +696,6 @@ function startTimer1() {
     if (timerRemaining1 > 0) {
         timerRemaining1--;
         updateTimerDisplay1();
-        // Sync timer state to server every second while running
-        syncStateToServer();
         
         // Warnings at specific times
         if (timerRemaining1 === 10) {
@@ -713,7 +711,8 @@ function startTimer1() {
         saveState(); // Sync stopped state
     }
     }, 1000);
-    saveState(); // Sync started state
+    // Sync started state once when timer is (re)started
+    saveState();
 }
 
 function pauseTimer1() { 
@@ -795,8 +794,6 @@ function startTimer2() {
     if (timerRemaining2 > 0) { 
         timerRemaining2--; 
         updateTimerDisplay2();
-        // Sync timer state to server every second while running
-        syncStateToServer();
         if (timerRemaining2 === 10) {
         showNotification('Timer 2: 10 seconds remaining');
         playWarningSound();
@@ -811,7 +808,8 @@ function startTimer2() {
         saveState(); // Sync stopped state
     }
     }, 1000);
-    saveState(); // Sync started state
+    // Sync started state once when timer is (re)started
+    saveState();
 }
 function pauseTimer2() { 
     if (timerInterval2 !== null) { 
