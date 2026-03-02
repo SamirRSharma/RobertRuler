@@ -41,41 +41,60 @@ document.getElementById('themeToggle').addEventListener('change', function () {
     else document.body.classList.remove('dark-mode');
 });
 
-/* ===== Local Storage Helper Functions ===== */
-function saveToStorage() {
+/* ===== Shared State & Persistence Helpers (Local + Redis) ===== */
+let lastRemoteUpdatedAt = 0;
+const SYNC_INTERVAL_MS = 1500; // How often to poll Redis-backed API for updates
+
+function getCurrentStateSnapshot() {
+    return {
+    queueOnes,
+    queueTwos,
+    currentSpeaker: document.getElementById('currentSpeakerDisplay').textContent || 'None',
+    totalSpeakersProcessed: totalSpeakersProcessed || 0
+    };
+}
+
+// Local-only storage (used as cache / offline fallback)
+function saveToLocalStorage(state) {
+    const snapshot = state || getCurrentStateSnapshot();
     try {
-    localStorage.setItem('queueOnes', JSON.stringify(queueOnes));
-    localStorage.setItem('queueTwos', JSON.stringify(queueTwos));
-    localStorage.setItem('currentSpeaker', document.getElementById('currentSpeakerDisplay').textContent);
-    localStorage.setItem('totalSpeakers', totalSpeakersProcessed);
+    localStorage.setItem('queueOnes', JSON.stringify(snapshot.queueOnes || []));
+    localStorage.setItem('queueTwos', JSON.stringify(snapshot.queueTwos || []));
+    localStorage.setItem('currentSpeaker', snapshot.currentSpeaker || 'None');
+    localStorage.setItem('totalSpeakers', snapshot.totalSpeakersProcessed || 0);
     } catch (e) {
     console.warn('Failed to save to localStorage:', e);
     }
 }
 
-function loadFromStorage() {
+function loadFromLocalStorage() {
+    const defaultState = {
+    queueOnes: [],
+    queueTwos: [],
+    currentSpeaker: 'None',
+    totalSpeakersProcessed: 0
+    };
+
     try {
     const savedOnes = localStorage.getItem('queueOnes');
     const savedTwos = localStorage.getItem('queueTwos');
     const savedCurrent = localStorage.getItem('currentSpeaker');
     const savedTotal = localStorage.getItem('totalSpeakers');
     
-    if (savedOnes) queueOnes = JSON.parse(savedOnes);
-    if (savedTwos) queueTwos = JSON.parse(savedTwos);
+    if (savedOnes) defaultState.queueOnes = JSON.parse(savedOnes);
+    if (savedTwos) defaultState.queueTwos = JSON.parse(savedTwos);
     if (savedCurrent && savedCurrent !== 'None') {
-        document.getElementById('currentSpeakerDisplay').textContent = savedCurrent;
+        defaultState.currentSpeaker = savedCurrent;
     }
-    if (savedTotal) totalSpeakersProcessed = parseInt(savedTotal);
-    updateQueueDisplay();
+    if (savedTotal) defaultState.totalSpeakersProcessed = parseInt(savedTotal);
     } catch (e) {
     console.warn('Failed to load from localStorage:', e);
-    // Reset to empty arrays if data is corrupted
-    queueOnes = [];
-    queueTwos = [];
     }
+
+    applyStateToUi(defaultState, false);
 }
 
-function clearStorage() {
+function clearLocalStorage() {
     try {
     localStorage.removeItem('queueOnes');
     localStorage.removeItem('queueTwos');
@@ -84,6 +103,97 @@ function clearStorage() {
     } catch (e) {
     console.warn('Failed to clear localStorage:', e);
     }
+}
+
+// Apply a full state object into in-memory variables + DOM
+function applyStateToUi(state, fromRemote) {
+    if (!state) return;
+
+    queueOnes = Array.isArray(state.queueOnes) ? state.queueOnes : [];
+    queueTwos = Array.isArray(state.queueTwos) ? state.queueTwos : [];
+    totalSpeakersProcessed = typeof state.totalSpeakersProcessed === 'number'
+    ? state.totalSpeakersProcessed
+    : 0;
+
+    const current = state.currentSpeaker || 'None';
+    document.getElementById('currentSpeakerDisplay').textContent = current;
+
+    updateQueueDisplay();
+    // Mirror remote state into localStorage cache as well
+    saveToLocalStorage(state);
+
+    if (fromRemote && typeof state.updatedAt === 'number') {
+    lastRemoteUpdatedAt = state.updatedAt;
+    }
+}
+
+async function syncStateToServer() {
+    const snapshot = getCurrentStateSnapshot();
+    try {
+    const res = await fetch('/api/state', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(snapshot),
+        cache: 'no-store'
+    });
+    if (!res.ok) return;
+    const serverState = await res.json();
+    if (serverState && typeof serverState.updatedAt === 'number') {
+        lastRemoteUpdatedAt = serverState.updatedAt;
+    }
+    } catch (e) {
+    console.warn('Failed to sync state to server:', e);
+    }
+}
+
+// Unified save: local cache + remote
+function saveState() {
+    saveToLocalStorage();
+    syncStateToServer();
+}
+
+async function loadInitialState() {
+    // Try Redis-backed API first
+    try {
+    const res = await fetch('/api/state', { method: 'GET', cache: 'no-store' });
+    if (res.ok) {
+        const remoteState = await res.json();
+        if (remoteState && (remoteState.queueOnes || remoteState.queueTwos)) {
+        applyStateToUi(remoteState, true);
+        // Start polling after initial load
+        startRemotePolling();
+        return;
+        }
+    }
+    } catch (e) {
+    console.warn('Failed to load from server, falling back to localStorage:', e);
+    }
+
+    // Fallback: localStorage-only (e.g., offline)
+    loadFromLocalStorage();
+    startRemotePolling();
+}
+
+function startRemotePolling() {
+    setInterval(async () => {
+    try {
+        const res = await fetch('/api/state', { method: 'GET', cache: 'no-store' });
+        if (!res.ok) return;
+        const remoteState = await res.json();
+        if (!remoteState) return;
+
+        const remoteUpdatedAt = typeof remoteState.updatedAt === 'number'
+        ? remoteState.updatedAt
+        : 0;
+
+        // Only apply remote state if it's newer than what we know
+        if (remoteUpdatedAt > lastRemoteUpdatedAt) {
+        applyStateToUi(remoteState, true);
+        }
+    } catch (e) {
+        console.warn('Polling for remote state failed:', e);
+    }
+    }, SYNC_INTERVAL_MS);
 }
 
 /* ===== Undo History System ===== */
@@ -119,7 +229,7 @@ function undoLastAction() {
     }
     
     updateQueueDisplay();
-    saveToStorage();
+    saveState();
     updateUndoButton();
     showNotification('Action undone');
 }
@@ -139,9 +249,9 @@ let queueTwos = [];
 let queueOnes = [];
 let totalSpeakersProcessed = 0;
 
-// Load saved data when app starts
+// Load shared WUSA state when app starts
 window.addEventListener('DOMContentLoaded', () => {
-    loadFromStorage();
+    loadInitialState();
 });
 
 function updateQueueDisplay() {
@@ -173,7 +283,7 @@ function updateQueueDisplay() {
         if (index > 0) {
         [queueOnes[index], queueOnes[index - 1]] = [queueOnes[index - 1], queueOnes[index]];
         updateQueueDisplay();
-        saveToStorage();
+        saveState();
         }
     });
     
@@ -187,7 +297,7 @@ function updateQueueDisplay() {
         if (index < queueOnes.length - 1) {
         [queueOnes[index], queueOnes[index + 1]] = [queueOnes[index + 1], queueOnes[index]];
         updateQueueDisplay();
-        saveToStorage();
+        saveState();
         }
     });
     
@@ -199,7 +309,7 @@ function updateQueueDisplay() {
     skipBtn.addEventListener('click', () => {
         speakerObj.skipped = !speakerObj.skipped;
         updateQueueDisplay();
-        saveToStorage();
+        saveState();
     });
     
     // Remove button
@@ -215,7 +325,7 @@ function updateQueueDisplay() {
         });
         queueOnes.splice(index, 1);
         updateQueueDisplay();
-        saveToStorage();
+        saveState();
         showNotification(`${speakerObj.name} removed`);
     });
     
@@ -251,7 +361,7 @@ function updateQueueDisplay() {
         if (index > 0) {
         [queueTwos[index], queueTwos[index - 1]] = [queueTwos[index - 1], queueTwos[index]];
         updateQueueDisplay();
-        saveToStorage();
+        saveState();
         }
     });
     
@@ -265,7 +375,7 @@ function updateQueueDisplay() {
         if (index < queueTwos.length - 1) {
         [queueTwos[index], queueTwos[index + 1]] = [queueTwos[index + 1], queueTwos[index]];
         updateQueueDisplay();
-        saveToStorage();
+        saveState();
         }
     });
     
@@ -277,7 +387,7 @@ function updateQueueDisplay() {
     skipBtn.addEventListener('click', () => {
         speakerObj.skipped = !speakerObj.skipped;
         updateQueueDisplay();
-        saveToStorage();
+        saveState();
     });
     
     // Remove button
@@ -293,7 +403,7 @@ function updateQueueDisplay() {
         });
         queueTwos.splice(index, 1);
         updateQueueDisplay();
-        saveToStorage();
+        saveState();
         showNotification(`${speakerObj.name} removed`);
     });
     controls.appendChild(moveUpBtn);
@@ -318,7 +428,7 @@ function addSpeaker1() {
     queueOnes.push({ name, skipped: false });
     input.value = "";
     updateQueueDisplay();
-    saveToStorage();
+    saveState();
 
     // Add success animation
     const list = document.getElementById('speakerList1');
@@ -333,7 +443,7 @@ function addSpeaker2() {
     queueTwos.push({ name, skipped: false });
     input.value = "";
     updateQueueDisplay();
-    saveToStorage();
+    saveState();
 
     // Add success animation
     const list = document.getElementById('speakerList2');
@@ -353,7 +463,7 @@ document.getElementById('nextSpeakerBtn').addEventListener('click', () => {
     document.getElementById('currentSpeakerDisplay').textContent = nextSpeaker;
     totalSpeakersProcessed++;
     updateQueueDisplay();
-    saveToStorage();
+    saveState();
     resetTimer1();
     startTimer1();
     } else showNotification("No speakers in the queue.");
@@ -370,7 +480,7 @@ document.getElementById('clearAllDataBtn').addEventListener('click', () => {
     queueTwos = [];
     totalSpeakersProcessed = 0;
     document.getElementById('currentSpeakerDisplay').textContent = 'None';
-    clearStorage();
+    clearLocalStorage();
     updateQueueDisplay();
     showNotification('All data cleared');
     }
@@ -392,7 +502,7 @@ document.getElementById('clearOnesBtn').addEventListener('click', () => {
     
     queueOnes = []; 
     updateQueueDisplay(); 
-    saveToStorage();
+    saveState();
     showNotification('Priority 1 queue cleared');
 });
 
@@ -406,7 +516,7 @@ document.getElementById('clearTwosBtn').addEventListener('click', () => {
     
     queueTwos = []; 
     updateQueueDisplay();
-    saveToStorage();
+    saveState();
     showNotification('Priority 2 queue cleared');
 });
 

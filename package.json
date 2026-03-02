@@ -1,0 +1,16 @@
+{
+  "name": "robert-rules-order-counter-wusa",
+  "version": "2.1.0",
+  "description": "Robert's Rules Order Counter for Waterloo Undergraduate Student Association (WUSA) with multi-user sync via Redis on Vercel.",
+  "private": true,
+  "scripts": {
+    "dev": "vercel dev",
+    "build": "echo \"Static project - no build step\"",
+    "start": "serve ."
+  },
+  "dependencies": {
+    "@upstash/redis": "^1.32.0"
+  }
+}
+
+

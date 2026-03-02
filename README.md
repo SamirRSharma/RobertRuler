@@ -1,8 +1,8 @@
-# 🎤 Robert's Rules Order Counter
+# 🎤 Robert's Rules Order Counter — WUSA Edition
 
-A modern web-based tool for managing speaker queues and timers during meetings that follow Robert's Rules of Order.
+A modern web-based tool for managing speaker queues and timers during meetings that follow Robert's Rules of Order, designed for the **Waterloo Undergraduate Student Association (WUSA)**.
 
-![Version](https://img.shields.io/badge/version-2.0-blue)
+![Version](https://img.shields.io/badge/version-2.1-wusa-blue)
 
 ## ✨ Features
 
@@ -19,9 +19,11 @@ A modern web-based tool for managing speaker queues and timers during meetings t
 
 ## 🚀 Quick Start
 
-Go to: https://mughh.github.io/RobertRuler/
-
-No installation or dependencies required - just open and go!
+- **Production (Vercel)**: your deployed URL from Vercel (e.g. `https://wusa-roberts-rules.vercel.app`)
+- **Local (for development)**:
+  1. Clone this repo
+  2. Run `npm install`
+  3. Run `vercel dev` to start the local dev server
 
 ## 📁 Project Structure
 
