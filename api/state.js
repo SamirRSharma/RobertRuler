@@ -16,6 +16,13 @@ function getDefaultState() {
     queueTwos: [],
     currentSpeaker: 'None',
     totalSpeakersProcessed: 0,
+    // Timer state
+    timerDuration1: 60,
+    timerRemaining1: 60,
+    timerIsRunning1: false,
+    timerDuration2: 60,
+    timerRemaining2: 60,
+    timerIsRunning2: false,
     updatedAt: Date.now(),
   };
 }

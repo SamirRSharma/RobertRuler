@@ -50,7 +50,14 @@ function getCurrentStateSnapshot() {
     queueOnes,
     queueTwos,
     currentSpeaker: document.getElementById('currentSpeakerDisplay').textContent || 'None',
-    totalSpeakersProcessed: totalSpeakersProcessed || 0
+    totalSpeakersProcessed: totalSpeakersProcessed || 0,
+    // Timer state
+    timerDuration1: timerDuration1 || 60,
+    timerRemaining1: timerRemaining1 || 60,
+    timerIsRunning1: timerInterval1 !== null,
+    timerDuration2: timerDuration2 || 60,
+    timerRemaining2: timerRemaining2 || 60,
+    timerIsRunning2: timerInterval2 !== null
     };
 }
 
@@ -117,6 +124,43 @@ function applyStateToUi(state, fromRemote) {
 
     const current = state.currentSpeaker || 'None';
     document.getElementById('currentSpeakerDisplay').textContent = current;
+
+    // Apply timer state if present
+    if (typeof state.timerDuration1 === 'number') {
+        timerDuration1 = state.timerDuration1;
+    }
+    if (typeof state.timerRemaining1 === 'number') {
+        timerRemaining1 = state.timerRemaining1;
+    }
+    if (typeof state.timerIsRunning1 === 'boolean') {
+        const shouldBeRunning = state.timerIsRunning1;
+        const isCurrentlyRunning = timerInterval1 !== null;
+        if (shouldBeRunning && !isCurrentlyRunning) {
+            // Remote says timer should be running, start it locally
+            startTimer1();
+        } else if (!shouldBeRunning && isCurrentlyRunning) {
+            // Remote says timer should be paused, pause it locally
+            pauseTimer1();
+        }
+    }
+    updateTimerDisplay1();
+
+    if (typeof state.timerDuration2 === 'number') {
+        timerDuration2 = state.timerDuration2;
+    }
+    if (typeof state.timerRemaining2 === 'number') {
+        timerRemaining2 = state.timerRemaining2;
+    }
+    if (typeof state.timerIsRunning2 === 'boolean') {
+        const shouldBeRunning = state.timerIsRunning2;
+        const isCurrentlyRunning = timerInterval2 !== null;
+        if (shouldBeRunning && !isCurrentlyRunning) {
+            startTimer2();
+        } else if (!shouldBeRunning && isCurrentlyRunning) {
+            pauseTimer2();
+        }
+    }
+    updateTimerDisplay2();
 
     updateQueueDisplay();
     // Mirror remote state into localStorage cache as well
@@ -480,8 +524,19 @@ document.getElementById('clearAllDataBtn').addEventListener('click', () => {
     queueTwos = [];
     totalSpeakersProcessed = 0;
     document.getElementById('currentSpeakerDisplay').textContent = 'None';
-    clearLocalStorage();
+    // Reset timers too
+    pauseTimer1();
+    pauseTimer2();
+    timerDuration1 = 60;
+    timerRemaining1 = 60;
+    timerDuration2 = 60;
+    timerRemaining2 = 60;
+    updateTimerDisplay1();
+    updateTimerDisplay2();
     updateQueueDisplay();
+    // Clear local cache and push empty state to shared backend
+    clearLocalStorage();
+    saveState();
     showNotification('All data cleared');
     }
 });
@@ -641,6 +696,8 @@ function startTimer1() {
     if (timerRemaining1 > 0) {
         timerRemaining1--;
         updateTimerDisplay1();
+        // Sync timer state to server every second while running
+        syncStateToServer();
         
         // Warnings at specific times
         if (timerRemaining1 === 10) {
@@ -653,27 +710,49 @@ function startTimer1() {
         showNotification("Timer 1: Time's up!");
         playTimerCompleteSound();
         document.getElementById('timerSection1').classList.remove('timer-warning', 'timer-critical');
+        saveState(); // Sync stopped state
     }
     }, 1000);
+    saveState(); // Sync started state
 }
 
-function pauseTimer1() { if (timerInterval1 !== null) { clearInterval(timerInterval1); timerInterval1 = null; } }
-function resetTimer1() { pauseTimer1(); timerRemaining1 = timerDuration1; updateTimerDisplay1(); }
+function pauseTimer1() { 
+    if (timerInterval1 !== null) { 
+        clearInterval(timerInterval1); 
+        timerInterval1 = null;
+        saveState(); // Sync paused state
+    } 
+}
+function resetTimer1() { 
+    pauseTimer1(); 
+    timerRemaining1 = timerDuration1; 
+    updateTimerDisplay1();
+    saveState(); // Sync reset state
+}
 
 document.querySelectorAll('#timerControls1 .preset').forEach(btn => {
-    btn.addEventListener('click', () => { timerDuration1 = parseInt(btn.getAttribute('data-seconds')); resetTimer1(); });
+    btn.addEventListener('click', () => { 
+        timerDuration1 = parseInt(btn.getAttribute('data-seconds')); 
+        resetTimer1(); 
+    });
 });
 document.getElementById('setCustomTimeBtn1').addEventListener('click', () => {
     const m = parseInt(document.getElementById('customMinutes1').value) || 0;
     const s = parseInt(document.getElementById('customSeconds1').value) || 0;
     const total = m * 60 + s;
     if (total <= 0) { showNotification("Please enter a valid time for Timer 1."); return; }
-    timerDuration1 = total; resetTimer1();
+    timerDuration1 = total; 
+    resetTimer1();
     document.getElementById('customMinutes1').value = "";
     document.getElementById('customSeconds1').value = "";
 });
 document.getElementById('add30SecsBtn1').addEventListener('click', () => {
-    timerRemaining1 += 30; timerDuration1 += 30; updateTimerDisplay1(); showNotification('Added 30 seconds to Timer 1'); playNotificationSound();
+    timerRemaining1 += 30; 
+    timerDuration1 += 30; 
+    updateTimerDisplay1(); 
+    saveState(); // Sync updated time
+    showNotification('Added 30 seconds to Timer 1'); 
+    playNotificationSound();
 });
 document.getElementById('startTimerBtn1').addEventListener('click', startTimer1);
 document.getElementById('pauseTimerBtn1').addEventListener('click', pauseTimer1);
@@ -716,6 +795,8 @@ function startTimer2() {
     if (timerRemaining2 > 0) { 
         timerRemaining2--; 
         updateTimerDisplay2();
+        // Sync timer state to server every second while running
+        syncStateToServer();
         if (timerRemaining2 === 10) {
         showNotification('Timer 2: 10 seconds remaining');
         playWarningSound();
@@ -727,26 +808,48 @@ function startTimer2() {
         showNotification("Timer 2: Time's up!"); 
         playTimerCompleteSound();
         document.getElementById('timerSection2').classList.remove('timer-warning', 'timer-critical');
+        saveState(); // Sync stopped state
     }
     }, 1000);
+    saveState(); // Sync started state
 }
-function pauseTimer2() { if (timerInterval2 !== null) { clearInterval(timerInterval2); timerInterval2 = null; } }
-function resetTimer2() { pauseTimer2(); timerRemaining2 = timerDuration2; updateTimerDisplay2(); }
+function pauseTimer2() { 
+    if (timerInterval2 !== null) { 
+        clearInterval(timerInterval2); 
+        timerInterval2 = null;
+        saveState(); // Sync paused state
+    } 
+}
+function resetTimer2() { 
+    pauseTimer2(); 
+    timerRemaining2 = timerDuration2; 
+    updateTimerDisplay2();
+    saveState(); // Sync reset state
+}
 
 document.querySelectorAll('#timerControls2 .preset').forEach(btn => {
-    btn.addEventListener('click', () => { timerDuration2 = parseInt(btn.getAttribute('data-seconds')); resetTimer2(); });
+    btn.addEventListener('click', () => { 
+        timerDuration2 = parseInt(btn.getAttribute('data-seconds')); 
+        resetTimer2(); 
+    });
 });
 document.getElementById('setCustomTimeBtn2').addEventListener('click', () => {
     const m = parseInt(document.getElementById('customMinutes2').value) || 0;
     const s = parseInt(document.getElementById('customSeconds2').value) || 0;
     const total = m * 60 + s;
     if (total <= 0) { showNotification("Please enter a valid time for Timer 2."); return; }
-    timerDuration2 = total; resetTimer2();
+    timerDuration2 = total; 
+    resetTimer2();
     document.getElementById('customMinutes2').value = "";
     document.getElementById('customSeconds2').value = "";
 });
 document.getElementById('add30SecsBtn2').addEventListener('click', () => {
-    timerRemaining2 += 30; timerDuration2 += 30; updateTimerDisplay2(); showNotification('Added 30 seconds to Timer 2'); playNotificationSound();
+    timerRemaining2 += 30; 
+    timerDuration2 += 30; 
+    updateTimerDisplay2(); 
+    saveState(); // Sync updated time
+    showNotification('Added 30 seconds to Timer 2'); 
+    playNotificationSound();
 });
 document.getElementById('startTimerBtn2').addEventListener('click', startTimer2);
 document.getElementById('pauseTimerBtn2').addEventListener('click', pauseTimer2);
