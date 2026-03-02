@@ -2,7 +2,7 @@
 
 A modern web-based tool for managing speaker queues and timers during meetings that follow Robert's Rules of Order, designed for the **Waterloo Undergraduate Student Association (WUSA)**.
 
-![Version](https://img.shields.io/badge/version-2.1-wusa-blue)
+![Version](https://img.shields.io/badge/Version-1.0-blue)
 
 ## ✨ Features
 
@@ -91,6 +91,9 @@ roberts-rules-tracker/
 
 ## 👥 Authors
 
+Motified for WUSA by **Samir Sharma**
+
+Originally Created by
 **Cyril El Feghali** & **Nicolas El Murr**
 
 ## 🐛 Known Issues
