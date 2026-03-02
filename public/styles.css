@@ -1,0 +1,936 @@
+/* ============================================
+   1. CSS VARIABLES & ROOT CONFIGURATION
+   ============================================ */
+:root {
+  /* Brand Colors */
+  --eus-red: #D72B2B;
+  --eus-red-hover: #C12828;
+  --eus-gray: #6A6A6A;
+  --eus-gray-hover: #555555;
+  
+  /* Theme Colors */
+  --bg-light: #f5f5f5;
+  --bg-dark: #000;
+  
+  /* UI Elements */
+  --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  --border-radius: 4px;
+  --transition-speed: 0.25s;
+  
+  /* Timer Circle Properties */
+  --circle-stroke-width: 10;
+  --circle-radius: 50;
+  --circle-circumference: 314.159; /* 2 * π * 50 = 314.159 */
+}
+
+
+/* ============================================
+   2. BASE & RESET STYLES
+   ============================================ */
+* { 
+  box-sizing: border-box; 
+}
+
+body {
+  font-family: 'Roboto', sans-serif;
+  margin: 0;
+  padding: 0;
+  background: var(--bg-light);
+  font-size: 14px;
+  color: #333;
+  transition: background 0.3s, color 0.3s;
+}
+
+
+/* ============================================
+   3. WELCOME / GATE PAGE
+   ============================================ */
+#gate {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  z-index: 9999;
+  opacity: 1;
+  transition: opacity 0.5s ease, visibility 0.5s ease;
+}
+
+#gate.fade-out {
+  opacity: 0;
+  visibility: hidden;
+}
+
+#gate .card {
+  width: min(92vw, 540px);
+  background: #fff;
+  color: #333;
+  border: 1px solid #ddd;
+  border-radius: 14px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+  padding: 26px 22px;
+  text-align: center;
+}
+
+#gate h1 {
+  margin: 0 0 32px;
+  font-size: 2rem;
+  letter-spacing: 0.2px;
+  color: var(--eus-red);
+}
+
+#gate h2 {
+  margin: 4px 0 16px;
+  font-weight: 500;
+  color: #666;
+  font-size: 1.1rem;
+}
+
+#gate img.logo {
+  width: 300px;
+  height: auto;
+  margin: 26px auto;
+  display: block;
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.1));
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+#gate .names {
+  margin-top: 16px;
+  margin-bottom: 16px;
+  font-size: 1.2rem;
+  color: #555;
+}
+
+#gate button.enter {
+  background: var(--eus-red);
+  color: #fff;
+  border: none;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: transform var(--transition-speed), background var(--transition-speed);
+  min-width: 120px;
+}
+
+#gate button.enter:hover {
+  background: var(--eus-red-hover);
+  transform: translateY(-1px);
+}
+
+#gate .footnote {
+  margin-top: 14px;
+  font-size: 0.85rem;
+  color: #9a9a9a;
+}
+
+#gate .logo-fallback {
+  text-align: center;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  padding: 20px;
+  border: 2px solid var(--eus-red);
+  border-radius: 10px;
+  display: inline-block;
+  margin: 20px auto;
+}
+
+
+/* ============================================
+   4. MAIN APP LAYOUT
+   ============================================ */
+#app {
+  display: none;
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+
+#app.fade-in {
+  display: block;
+  animation: fadeIn 0.5s ease forwards;
+}
+
+main {
+  display: flex;
+  flex-direction: row;
+  padding: 8px 8px 50px 8px;
+  gap: 8px;
+  width: 100%;
+}
+
+.left-panel {
+  flex: 2;
+  padding: 8px;
+}
+
+.right-panel {
+  flex: 1;
+  padding: 8px;
+}
+
+
+/* ============================================
+   5. HEADER & NAVIGATION
+   ============================================ */
+header {
+  position: relative;
+  width: 100%;
+  background: linear-gradient(135deg, var(--eus-red), #A31F27);
+  padding: 12px 0;
+  box-shadow: var(--box-shadow);
+}
+
+header h1 {
+  text-align: center;
+  margin: 0;
+  color: #fff;
+  font-size: 1.9em;
+}
+
+/* Dark Mode Toggle Switch */
+.toggle-switch {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 60px;
+  height: 30px;
+}
+
+.toggle-switch input {
+  display: none;
+}
+
+.toggle-switch label {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: #ccc;
+  border-radius: 15px;
+  position: relative;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.toggle-switch .toggle-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 26px;
+  height: 26px;
+  background: #fff;
+  border-radius: 50%;
+  transition: left 0.3s;
+  z-index: 2;
+}
+
+.toggle-switch input:checked + label {
+  background: var(--eus-red);
+}
+
+.toggle-switch input:checked + label .toggle-knob {
+  left: 32px;
+}
+
+/* Sound Toggle Button */
+#soundToggle {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #fff;
+  padding: 6px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9em;
+  transition: background 0.2s;
+}
+
+#soundToggle:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+
+/* ============================================
+   6. SECTIONS & CONTENT
+   ============================================ */
+section {
+  background: #fff;
+  padding: 16px;
+  border-radius: var(--border-radius);
+  box-shadow: var(--box-shadow);
+  border: 1px solid #ddd;
+  margin-bottom: 12px;
+  transition: background 0.3s, border-color 0.3s;
+}
+
+h2 {
+  margin: 0 0 8px;
+  font-size: 1.4em;
+  color: var(--eus-red);
+  text-align: left;
+  padding-bottom: 4px;
+}
+
+/* Current Speaker Display */
+#currentSpeakerDisplay {
+  font-size: 1.5em;
+  padding: 12px;
+  background: #e9ecef;
+  border-radius: 3px;
+  text-align: center;
+  margin: 0 8px;
+}
+
+/* Session Statistics */
+.stat-label {
+  font-size: 0.9em;
+  margin: 4px auto;
+  color: #666;
+}
+
+
+/* ============================================
+   7. FORMS & INPUTS
+   ============================================ */
+.flex-container {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 0 8px;
+}
+
+.column {
+  flex: 1;
+  min-width: 220px;
+}
+
+input[type="text"],
+input[type="number"] {
+  width: 100%;
+  padding: 8px;
+  margin: 4px 0;
+  border: 1px solid #ccc;
+  border-radius: var(--border-radius);
+  transition: border 0.2s;
+}
+
+input[type="text"]:focus,
+input[type="number"]:focus {
+  border-color: var(--eus-red);
+  outline: none;
+}
+
+
+/* ============================================
+   8. BUTTONS
+   ============================================ */
+button {
+  padding: 8px 12px;
+  margin: 4px 0;
+  border: none;
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  font-size: 1em;
+  color: #fff;
+  transition: background var(--transition-speed), transform var(--transition-speed);
+}
+
+button:hover {
+  transform: scale(1.02);
+}
+
+button.default,
+button:not(.start-btn):not(.stop-btn) {
+  background: var(--eus-red);
+}
+
+button.default:hover,
+button:not(.start-btn):not(.stop-btn):hover {
+  background: var(--eus-red-hover);
+}
+
+.preset {
+  background: var(--eus-red);
+}
+
+.preset:hover {
+  background: var(--eus-red-hover);
+}
+
+.start-btn {
+  background: var(--eus-red);
+}
+
+.start-btn:hover {
+  background: var(--eus-red-hover);
+}
+
+.stop-btn {
+  background: var(--eus-gray);
+}
+
+.stop-btn:hover {
+  background: var(--eus-gray-hover);
+}
+
+#resetTimerBtn1,
+#resetTimerBtn2 {
+  background: #888;
+}
+
+#resetTimerBtn1:hover,
+#resetTimerBtn2:hover {
+  background: #777;
+}
+
+#nextSpeakerBtn {
+  min-height: 40px;
+}
+
+#undoBtn {
+  background: #5cb85c;
+}
+
+#undoBtn:hover:not(:disabled) {
+  background: #4cae4c;
+}
+
+#undoBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.clear-btn {
+  padding: 6px 8px;
+  font-size: 1em;
+}
+
+
+/* ============================================
+   9. QUEUE SYSTEM
+   ============================================ */
+.queue-container {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  padding: 0 8px;
+  flex-wrap: nowrap;
+}
+
+.queue-container .column {
+  width: 48%;
+}
+
+.queue-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+  padding: 0 8px;
+}
+
+.queue-header h3 {
+  margin: 0;
+  font-size: 1.15em;
+}
+
+.queue-list {
+  list-style: none;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: var(--border-radius);
+  min-height: 60px;
+  background: #fafafa;
+  font-size: 0.9em;
+  margin: 0 8px;
+}
+
+.queue-list li {
+  padding: 4px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.queue-list li:last-child {
+  border-bottom: none;
+}
+
+.queue-list.success {
+  animation: successPulse 0.5s ease;
+}
+
+.skipped {
+  text-decoration: line-through;
+}
+
+
+/* ============================================
+   10. TIMER COMPONENTS
+   ============================================ */
+.circle-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+svg#timerCircle1,
+svg#timerCircle2 {
+  width: 140px;
+  height: 140px;
+}
+
+circle.timer-bg {
+  fill: none;
+  stroke: #ccc;
+  stroke-width: var(--circle-stroke-width);
+}
+
+circle.timer-progress {
+  fill: none;
+  stroke: var(--eus-red);
+  stroke-width: var(--circle-stroke-width);
+  stroke-dasharray: var(--circle-circumference);
+  stroke-dashoffset: 0;
+  transition: stroke-dashoffset 0.25s linear;
+}
+
+text#timerDisplay1,
+text#timerDisplay2 {
+  fill: #333;
+  font-size: 20px;
+  text-anchor: middle;
+  dominant-baseline: middle;
+}
+
+/* Timer Controls */
+#timerControls1,
+#timerControls2 {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 4px 12px;
+}
+
+.custom-time-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  margin: 0 4px 12px;
+}
+
+.custom-time-container input {
+  width: 80px;
+  padding: 8px;
+}
+
+/* Timer Warning States */
+.timer-warning circle.timer-progress {
+  stroke: #ff9800;
+}
+
+.timer-critical circle.timer-progress {
+  stroke: #f44336;
+}
+
+.timer-critical svg {
+  animation: pulse 1s infinite;
+}
+
+
+/* ============================================
+   11. SPEAKER CONTROLS
+   ============================================ */
+.speaker-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 8px;
+  border-bottom: 1px solid #eee;
+  transition: background 0.2s;
+}
+
+.speaker-item:hover {
+  background: #f0f0f0;
+}
+
+.speaker-item-name {
+  flex: 1;
+  margin-right: 8px;
+}
+
+.speaker-item-controls {
+  display: flex;
+  gap: 3px;
+  flex-wrap: nowrap;
+}
+
+.speaker-item button {
+  padding: 4px 8px;
+  font-size: 0.85em;
+  min-width: auto;
+  margin: 0;
+}
+
+.skip-btn {
+  background: var(--eus-gray);
+}
+
+.skip-btn:hover {
+  background: var(--eus-gray-hover);
+}
+
+.remove-btn {
+  background: #d9534f;
+}
+
+.remove-btn:hover {
+  background: #c9302c;
+}
+
+.reorder-btn {
+  background: var(--eus-gray);
+  padding: 2px 6px;
+  font-size: 0.75em;
+  min-width: 24px;
+}
+
+.reorder-btn:hover {
+  background: var(--eus-gray-hover);
+}
+
+.reorder-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+
+/* ============================================
+   12. NOTIFICATIONS & ALERTS
+   ============================================ */
+#notification {
+  position: fixed;
+  top: 80px;
+  right: 20px;
+  padding: 16px 20px;
+  background: var(--eus-red);
+  color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  font-size: 1.1em;
+  font-weight: 500;
+  z-index: 10000;
+  display: none;
+  min-width: 250px;
+}
+
+#notification.show {
+  display: block;
+  animation: slideIn 0.3s ease-out;
+}
+
+
+/* ============================================
+   13. FOOTER
+   ============================================ */
+#footer {
+  position: fixed;
+  bottom: 0;
+  right: 0;
+  margin: 10px;
+  font-size: 0.85em;
+  color: #333;
+  opacity: 0.5;
+  z-index: 1000;
+  transition: color 0.3s;
+}
+
+
+/* ============================================
+   14. ANIMATIONS & KEYFRAMES
+   ============================================ */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(400px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+@keyframes successPulse {
+  0% {
+    background: #fff;
+  }
+  50% {
+    background: #d4edda;
+  }
+  100% {
+    background: #fff;
+  }
+}
+
+@keyframes successPulseDark {
+  0% {
+    background: #111;
+  }
+  50% {
+    background: #1e4620;
+  }
+  100% {
+    background: #111;
+  }
+}
+
+
+/* ============================================
+   15. DARK MODE THEME
+   ============================================ */
+body.dark-mode {
+  background: #000;
+  color: #fff;
+}
+
+body.dark-mode header {
+  background: #111;
+}
+
+body.dark-mode section {
+  background: #111;
+  border-color: #333;
+}
+
+body.dark-mode h2 {
+  color: #fff;
+  border-bottom-color: #fff;
+}
+
+body.dark-mode input,
+body.dark-mode button {
+  border-color: #333;
+}
+
+body.dark-mode .queue-list {
+  background: #111;
+  border-color: #333;
+}
+
+body.dark-mode .queue-list.success {
+  animation: successPulseDark 0.5s ease;
+}
+
+body.dark-mode .speaker-item:hover {
+  background: #222;
+}
+
+body.dark-mode #currentSpeakerDisplay {
+  background: #333;
+  color: #fff;
+}
+
+body.dark-mode #session-stats {
+  background: #111;
+  border-color: #333;
+}
+
+body.dark-mode #session-stats .stat-label {
+  color: #999;
+}
+
+body.dark-mode svg#timerCircle1 circle.timer-bg,
+body.dark-mode svg#timerCircle2 circle.timer-bg {
+  stroke: #333;
+}
+
+body.dark-mode svg#timerCircle1 circle.timer-progress,
+body.dark-mode svg#timerCircle2 circle.timer-progress {
+  stroke: var(--eus-red);
+}
+
+body.dark-mode svg#timerCircle1 text#timerDisplay1,
+body.dark-mode svg#timerCircle2 text#timerDisplay2 {
+  fill: #fff;
+}
+
+body.dark-mode #footer {
+  color: #fff;
+}
+
+body.dark-mode .toggle-switch label {
+  background: #666;
+}
+
+body.dark-mode .toggle-switch label:hover {
+  background: #666;
+}
+
+
+/* ============================================
+   16. RESPONSIVE DESIGN - TABLET
+   ============================================ */
+@media (max-width: 768px) {
+  main {
+    flex-direction: column;
+    padding: 4px 4px 60px 4px;
+  }
+
+  .left-panel,
+  .right-panel {
+    width: 100%;
+    padding: 4px;
+  }
+
+  header h1 {
+    font-size: 1.6em;
+    padding: 0 50px;
+  }
+
+  /* Touch-Friendly Targets */
+  button {
+    padding: 12px 16px;
+    font-size: 1.05em;
+    min-height: 44px;
+  }
+
+  input[type="text"],
+  input[type="number"] {
+    padding: 12px;
+    font-size: 1.05em;
+    min-height: 44px;
+  }
+
+  .custom-time-container input {
+    width: 100px;
+    padding: 12px;
+  }
+
+  #timerControls1 button,
+  #timerControls2 button {
+    padding: 10px 14px;
+    min-width: 85px;
+  }
+
+  /* Queue Adjustments */
+  .queue-container {
+    flex-direction: column;
+  }
+
+  .queue-container .column {
+    width: 100%;
+  }
+
+  .speaker-item {
+    padding: 10px 8px;
+  }
+
+  .speaker-item-name {
+    font-size: 1.05em;
+  }
+
+  .speaker-item button {
+    padding: 8px 10px;
+    font-size: 0.95em;
+    min-height: 36px;
+    min-width: 36px;
+  }
+
+  /* Timer Adjustments */
+  svg#timerCircle1,
+  svg#timerCircle2 {
+    width: 180px;
+    height: 180px;
+  }
+
+  #currentSpeakerDisplay {
+    font-size: 1.8em;
+    padding: 16px;
+  }
+
+  /* Controls */
+  #soundToggle {
+    top: 8px;
+    left: 8px;
+    font-size: 1.2em;
+    padding: 8px 12px;
+  }
+
+  #keyboardShortcutsBtn {
+    bottom: 60px;
+    right: 10px;
+    font-size: 1.1em;
+    padding: 10px 14px;
+  }
+
+  #notification {
+    top: 70px;
+    right: 10px;
+    left: 10px;
+    min-width: auto;
+    font-size: 1em;
+  }
+}
+
+
+/* ============================================
+   17. RESPONSIVE DESIGN - MOBILE
+   ============================================ */
+@media (max-width: 480px) {
+  header h1 {
+    font-size: 1.4em;
+  }
+
+  h2 {
+    font-size: 1.15em;
+  }
+
+  .toggle-switch {
+    top: 8px;
+    right: 8px;
+    width: 50px;
+    height: 25px;
+  }
+
+  .toggle-switch .toggle-knob {
+    width: 21px;
+    height: 21px;
+  }
+
+  .toggle-switch input:checked + label .toggle-knob {
+    left: 27px;
+  }
+
+  #timerControls1 button,
+  #timerControls2 button {
+    padding: 8px 10px;
+    min-width: 75px;
+    font-size: 0.95em;
+  }
+}
